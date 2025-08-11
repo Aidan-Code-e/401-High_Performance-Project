@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 2.10.0)
+project(CREATESIGS VERSION -1.1.0 LANGUAGES C CXX)
+
+set(RESOURCE_FILES "small.fasta"
+                   "qut1.fasta"
+                   "qut2.fasta")
+
+file(COPY ${RESOURCE_FILES}
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(CREATESIGS ISAAC-rand.cpp signature.cpp)
