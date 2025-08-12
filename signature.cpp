@@ -5,6 +5,8 @@
 #include "uthash.h"
 #include <chrono>
 
+#include "tracy/Tracy.hpp"
+
 typedef unsigned char byte;
 
 #define SIGNATURE_LEN 64
@@ -131,8 +133,8 @@ int power(int n, int e)
 
 int main(int argc, char* argv[])
 {
-    const char* filename = "../small.fasta";
-    // const char* filename = "../qut2.fasta";
+    // const char* filename = "../small.fasta";
+    const char* filename = "../qut2.fasta";
     // const char* filename = "../qut3.fasta";
    
     WORDLEN = 3;
