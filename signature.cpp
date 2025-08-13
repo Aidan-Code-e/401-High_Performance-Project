@@ -24,7 +24,6 @@ int PARTITION_SIZE;
 int inverse[256];
 const char* alphabet = "CSTPAGNDEQHRKMILVFYW";
 
-
 void seed_random(char* term, int length);
 short random_num(short max);
 void Init();
@@ -43,14 +42,14 @@ typedef struct
 
 hash_term *vocab = NULL;
 
-
 short* compute_new_term_sig(char* term, short *term_sig){
     ZoneScoped;
-
-    memset(term_sig, 1, SIGNATURE_LEN);
-    memset(term_sig, -1, SIGNATURE_LEN -SIGNATURE_DENSITY/2 -1);
-    memset(term_sig,  0, SIGNATURE_LEN -SIGNATURE_DENSITY   -1);
-    std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN]);
+    
+    memset(term_sig, -1, SIGNATURE_DENSITY * sizeof(term_sig));
+    memset(term_sig,  1, (SIGNATURE_DENSITY * sizeof(term_sig))/2);
+    
+    seed_random(term, SIGNATURE_LEN);
+    std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN], random_num);
     return term_sig;
 }
 
