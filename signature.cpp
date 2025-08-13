@@ -5,13 +5,20 @@
 #include "uthash.h"
 #include <chrono>
 
-#include "tracy/Tracy.hpp"
+#include <algorithm> //std::random_shuffle
+
+// #include "tracy/Tracy.hpp"
+
+#ifndef ZoneScoped 
+    #define ZoneScoped 0
+#endif
 
 typedef unsigned char byte;
 
 #define SIGNATURE_LEN 64
 
-int DENSITY  = 21;
+int DENSITY  = 21/100;
+int SIGNATURE_DENSITY = SIGNATURE_LEN * 21/100;
 int PARTITION_SIZE;
 
 int inverse[256];
@@ -37,35 +44,18 @@ typedef struct
 hash_term *vocab = NULL;
 
 
-short* compute_new_term_sig(char* term, short *term_sig)
-{
-    seed_random(term, WORDLEN);
+short* compute_new_term_sig(char* term, short *term_sig){
+    ZoneScoped;
 
-    int non_zero = SIGNATURE_LEN * DENSITY/100;
-
-    int positive = 0;
-    while (positive < non_zero/2)
-    {
-        short pos = random_num(SIGNATURE_LEN);
-        if (term_sig[pos] == 0){
-            term_sig[pos] = 1;
-            positive++;
-        }
-    }
-
-    int negative = 0;
-    while (negative < non_zero/2){
-        short pos = random_num(SIGNATURE_LEN);
-        if (term_sig[pos] == 0){
-            term_sig[pos] = -1;
-            negative++;
-        }
-    }
+    memset(term_sig, 1, SIGNATURE_LEN);
+    memset(term_sig, -1, SIGNATURE_LEN -SIGNATURE_DENSITY/2 -1);
+    memset(term_sig,  0, SIGNATURE_LEN -SIGNATURE_DENSITY   -1);
+    std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN]);
     return term_sig;
 }
 
-short *find_sig(char* term)
-{
+short *find_sig(char* term){
+    ZoneScoped;
     hash_term *entry;
     HASH_FIND(hh, vocab, term, WORDLEN, entry);
     if (entry == NULL)    {
@@ -80,8 +70,8 @@ short *find_sig(char* term)
 }
 
 
-void signature_add(char* term)
-{
+void signature_add(char* term){
+    ZoneScoped;
 	short* term_sig = find_sig(term);
 	for (int i=0; i<SIGNATURE_LEN; i++){
 		doc_sig[i] += term_sig[i];
@@ -90,8 +80,8 @@ void signature_add(char* term)
 
 int doc = 0;
 
-void compute_signature(char* sequence, int length)
-{
+void compute_signature(char* sequence, int length){
+    ZoneScoped;
     memset(doc_sig, 0, sizeof(doc_sig));
 
     for (int i=0; i<length-WORDLEN+1; i++){
@@ -114,6 +104,7 @@ void compute_signature(char* sequence, int length)
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 void partition(char* sequence, int length){
+    ZoneScoped;
     int i=0;
     do{
         compute_signature(sequence+i, min(PARTITION_SIZE, length-i));
@@ -122,8 +113,8 @@ void partition(char* sequence, int length){
     doc++;
 }
 
-int power(int n, int e)
-{
+int power(int n, int e){
+    ZoneScoped;
     int p = 1;
     for (int j=0; j<e; j++){
         p *= n;
@@ -133,8 +124,9 @@ int power(int n, int e)
 
 int main(int argc, char* argv[])
 {
-    // const char* filename = "../small.fasta";
-    const char* filename = "../qut2.fasta";
+    ZoneScoped;
+    const char* filename = "../small.fasta";
+    // const char* filename = "../qut2.fasta";
     // const char* filename = "../qut3.fasta";
    
     WORDLEN = 3;
