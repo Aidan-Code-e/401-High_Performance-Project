@@ -7,7 +7,7 @@
 
 #include <algorithm> //std::random_shuffle
 
-// #include "tracy/Tracy.hpp"
+#include "tracy/Tracy.hpp"
 
 #ifndef ZoneScoped 
     #define ZoneScoped 0
@@ -44,12 +44,13 @@ hash_term *vocab = NULL;
 
 short* compute_new_term_sig(char* term, short *term_sig){
     ZoneScoped;
-    
+
     memset(term_sig, -1, SIGNATURE_DENSITY * sizeof(term_sig));
     memset(term_sig,  1, (SIGNATURE_DENSITY * sizeof(term_sig))/2);
-    
+
     seed_random(term, SIGNATURE_LEN);
     std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN], random_num);
+    // printf("%d", term_sig[0]);
     return term_sig;
 }
 
@@ -67,7 +68,6 @@ short *find_sig(char* term){
 
     return entry->sig;
 }
-
 
 void signature_add(char* term){
     ZoneScoped;

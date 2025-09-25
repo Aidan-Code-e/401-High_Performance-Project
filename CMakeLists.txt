@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(CREATESIGS LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 11) 
 
 set(RESOURCE_FILES "small.fasta"
                    "qut2.fasta"
@@ -21,7 +22,6 @@ FetchContent_Declare(
      GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(tracy)
-
 
 add_executable(CREATESIGS ISAAC-rand.cpp signature.cpp "${tracy_SOURCE_DIR}/public/TracyClient.cpp")
 
