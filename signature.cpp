@@ -15,7 +15,6 @@
 #include <algorithm> //std::random_shuffle
 
 #include "tracy/Tracy.hpp"
-
 #ifndef ZoneScoped 
     #define ZoneScoped 0
 #endif
@@ -47,7 +46,7 @@ typedef struct
 
 hash_term *vocab = NULL;
 
-void compute_new_term_sig(char* term, int8_t *term_sig){
+int8_t *compute_new_term_sig(char* term, int8_t *term_sig){
     ZoneScoped;
 
     const uint8_t step = SIGNATURE_DENSITY * sizeof(int8_t) / 2;
@@ -59,10 +58,29 @@ void compute_new_term_sig(char* term, int8_t *term_sig){
     seed_random(term, SIGNATURE_LEN);
     std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN], random_num);
 
-    return; // term_sig returned
+    return term_sig; // term_sig returned
 }
 
+int8_t *find_sig(char* term)
+{
+    ZoneScoped;
+    hash_term *entry;
+    HASH_FIND(hh, vocab, term, WORDLEN, entry);
+    if (entry == NULL)
+    {
+        entry = (hash_term*)malloc(sizeof(hash_term));
+        strncpy_s(entry->term, sizeof(entry->term), term, WORDLEN);
+        memset(entry->sig, 0, sizeof(entry->sig));
+        compute_new_term_sig(term, (int8_t *)entry->sig);
+        HASH_ADD(hh, vocab, term, WORDLEN, entry);
+    }
+
+    return (int8_t *)entry->sig;
+}
+
+// I might not be alligning right
 void add_int8_simd(int8_t* a, const int8_t* b, const int8_t* c) {
+    ZoneScoped;
     int i;
     for (i = 0; i + 32 <= SIGNATURE_LEN; i += 32) { // Process 32 int8_t at a time
         __m256i vec_b = _mm256_load_si256((__m256i*)&b[i]);
@@ -77,24 +95,8 @@ void add_int8_simd(int8_t* a, const int8_t* b, const int8_t* c) {
 }
 
 int doc = 0;
-void compute_signature(char* sequence, int length){
+void write_sig(int8_t *doc_sig){
     ZoneScoped;
-
-    // get all signatures
-    int8_t signatures[length-WORDLEN+1][SIGNATURE_LEN];
-    memset(signatures, 0, (length-WORDLEN+1)*SIGNATURE_LEN*sizeof(int8_t));
-
-    for (int i=0; i<length-WORDLEN+1; i++){
-        compute_new_term_sig(sequence+i, signatures[i]);
-    }
-
-    int8_t doc_sig[SIGNATURE_LEN];
-    memset(doc_sig, 0, sizeof(doc_sig));
-    // add all signatures
-    for (int8_t i = 0; i<length-WORDLEN+1; i++){
-        add_int8_simd(doc_sig, doc_sig, signatures[i]);
-    }
-
     // save document number to sig file
     fwrite(&doc, sizeof(int), 1, sig_file);
 
@@ -106,6 +108,31 @@ void compute_signature(char* sequence, int length){
         }
         fwrite(&c, sizeof(byte), 1, sig_file);
     }
+}
+
+void compute_signature(char* sequence, int length){
+    ZoneScoped;
+    
+    int8_t doc_sig[SIGNATURE_LEN];
+    memset(doc_sig, 0, sizeof(int8_t)*SIGNATURE_LEN);
+
+    if (length+1<WORDLEN){
+        write_sig(doc_sig);
+        return;
+    }
+
+    // get all signatures
+    int8_t *signatures[length-WORDLEN+1];
+
+    for (int i=0; i<length-WORDLEN+1; i++){
+        signatures[i] = compute_new_term_sig(sequence+i, signatures[i]);
+    }
+
+    // add all signatures
+    for (int i = 0; i<length-WORDLEN+1; i++){
+        add_int8_simd(doc_sig, doc_sig, signatures[i]);
+    }
+    write_sig(doc_sig);
 }
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
@@ -133,8 +160,8 @@ int main(int argc, char* argv[])
 {
     ZoneScoped;
     // const char* filename = "../small.fasta";
-    const char* filename = "../qut2.fasta";
-    // const char* filename = "../qut3.fasta";
+    // const char* filename = "../qut2.fasta";
+    const char* filename = "qut3.fasta";
 
     WORDLEN = SIGNATURE_LEN;
     PARTITION_SIZE = 1024;
