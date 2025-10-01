@@ -1,4 +1,3 @@
 .vscode/
 build/
-*.fasta
-*.part16_sigs03_64
+*.fasta*
