@@ -40,7 +40,6 @@ typedef struct
 
 hash_term *vocab = NULL;
 
-
 short* compute_new_term_sig(char* term, short *term_sig)
 {
     ZoneScoped;
@@ -69,6 +68,11 @@ short* compute_new_term_sig(char* term, short *term_sig)
             negative++;
         }
     }
+    // printf("first term sig: ");
+    // for(int i = 0; i<SIGNATURE_LEN; i++){
+    //     printf("%d", term_sig[i]);
+    // }
+    // exit(0);
     return term_sig;
 }
 
@@ -148,9 +152,9 @@ int power(int n, int e)
 int main(int argc, char* argv[])
 {
     ZoneScoped;
-    // const char* filename = "../small.fasta";
+    const char* filename = "../small.fasta";
     //const char* filename = "qut2.fasta";
-    const char* filename = "qut3.fasta";
+    // const char* filename = "qut3.fasta";
     
     WORDLEN = SIGNATURE_LEN;
     PARTITION_SIZE = 1024;
@@ -184,7 +188,6 @@ int main(int argc, char* argv[])
         partition(buffer, n);
     }
     fclose(file);
-
     fclose(sig_file);
 
     auto end = std::chrono::high_resolution_clock::now();

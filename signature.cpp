@@ -23,8 +23,11 @@ typedef unsigned char byte;
 
 #define SIGNATURE_LEN 64
 
-int DENSITY  = 21/100;
-int SIGNATURE_DENSITY = SIGNATURE_LEN * 21/100;
+#define DENSITY 21
+const int SIGNATURE_DENSITY = (SIGNATURE_LEN * DENSITY)/100;
+
+int8_t SIGNATURE_TEMPLATE[SIGNATURE_LEN];
+
 int PARTITION_SIZE;
 
 int inverse[256];
@@ -46,7 +49,26 @@ typedef struct
 
 hash_term *vocab = NULL;
 
-int8_t *compute_new_term_sig(char* term, int8_t *term_sig){
+void Init(){
+    // This is very ugly // It's just setting the SIGNATURE_TEMPLATE array with the density of -1, 1 and 0. (it's not random though that happends later multiple times in computer_new_term_sig)
+    const uint8_t step = SIGNATURE_DENSITY * sizeof(int8_t) / 2;
+    memset(SIGNATURE_TEMPLATE, -1, step);
+    memset(&SIGNATURE_TEMPLATE[step],  1, step);
+    memset(&SIGNATURE_TEMPLATE[step*2], 0, SIGNATURE_LEN - step*2);
+}
+
+void compute_new_term_sig(char* term, int8_t *term_sig){
+    ZoneScoped;
+
+    memcpy(term_sig, SIGNATURE_TEMPLATE, SIGNATURE_LEN);
+    seed_random(term, SIGNATURE_LEN);
+    std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN], random_num);
+
+    return; // term_sig returned
+}
+
+/*
+void compute_new_term_sig(char* term, int8_t *term_sig){
     ZoneScoped;
 
     const uint8_t step = SIGNATURE_DENSITY * sizeof(int8_t) / 2;
@@ -58,9 +80,50 @@ int8_t *compute_new_term_sig(char* term, int8_t *term_sig){
     seed_random(term, SIGNATURE_LEN);
     std::random_shuffle(&term_sig[0], &term_sig[SIGNATURE_LEN], random_num);
 
-    return term_sig; // term_sig returned
+    return; // term_sig returned
 }
+*/
 
+/*
+int8_t* compute_new_term_sig(char* term, int8_t *term_sig)
+{
+    ZoneScoped;
+    memset(term_sig, 0, SIGNATURE_LEN);
+    seed_random(term, WORDLEN);
+
+    int non_zero = SIGNATURE_DENSITY;
+
+    int positive = 0;
+    while (positive < non_zero/2)
+    {
+        short pos = random_num(SIGNATURE_LEN);
+        if (term_sig[pos] == 0){
+            term_sig[pos] = 1;
+            positive++;
+        }
+    }
+
+    int negative = 0;
+    while (negative < non_zero/2)
+    {
+        short pos = random_num(SIGNATURE_LEN);
+        if (term_sig[pos] == 0) 
+	{
+            term_sig[pos] = -1;
+            negative++;
+        }
+    }
+    // printf("term: %s\n", term);
+    // printf("term sig: ");
+    // for(int i = 0; i<SIGNATURE_LEN; i++){
+    //     printf("%d", term_sig[i]);
+    // }
+    // printf("\n");
+    return term_sig;
+}
+*/
+
+/*
 int8_t *find_sig(char* term)
 {
     ZoneScoped;
@@ -77,6 +140,7 @@ int8_t *find_sig(char* term)
 
     return (int8_t *)entry->sig;
 }
+*/
 
 // I might not be alligning right
 void add_int8_simd(int8_t* a, const int8_t* b, const int8_t* c) {
@@ -122,10 +186,10 @@ void compute_signature(char* sequence, int length){
     }
 
     // get all signatures
-    int8_t *signatures[length-WORDLEN+1];
+    int8_t signatures[length-WORDLEN+1][SIGNATURE_LEN];
 
     for (int i=0; i<length-WORDLEN+1; i++){
-        signatures[i] = compute_new_term_sig(sequence+i, signatures[i]);
+        compute_new_term_sig(sequence+i, signatures[i]);
     }
 
     // add all signatures
@@ -159,9 +223,12 @@ int power(int n, int e){
 int main(int argc, char* argv[])
 {
     ZoneScoped;
-    // const char* filename = "../small.fasta";
+
+    Init();
+
+    const char* filename = "../small.fasta";
     // const char* filename = "../qut2.fasta";
-    const char* filename = "qut3.fasta";
+    // const char* filename = "../qut3.fasta";
 
     WORDLEN = SIGNATURE_LEN;
     PARTITION_SIZE = 1024;
@@ -193,7 +260,6 @@ int main(int argc, char* argv[])
         partition(buffer, n);
     }
     fclose(file);
-
     fclose(sig_file);
 
     auto end = std::chrono::high_resolution_clock::now();

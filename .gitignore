@@ -1,3 +1,4 @@
 .vscode/
 build/
 *.fasta*
+!small.fasta.part*
